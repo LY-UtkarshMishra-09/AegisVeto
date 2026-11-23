@@ -7,9 +7,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#09090B',
-        card: '#111113',
-        hairline: '#27272A',
+        midnight: '#080B0E',
+        'midnight-surface': '#0E1317',
+        'sage-deep': '#16221D',
+        'sage-border': '#263830',
+        'sage-muted': '#7E9489',
+        'acid-lime': '#D4F849',
+        ink: '#ECF2EE',
+        'amber-warn': '#F59E0B',
+        'crimson-veto': '#F43F5E',
       },
       fontFamily: {
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],

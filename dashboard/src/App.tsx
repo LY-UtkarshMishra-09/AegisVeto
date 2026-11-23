@@ -293,7 +293,7 @@ export const App: React.FC = () => {
   const pendingCount = quarantineQueue.filter((item) => item.status === 'PENDING').length;
 
   return (
-    <div className="flex h-screen bg-[#09090B] text-zinc-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#080B0E] text-[#ECF2EE] overflow-hidden font-sans">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}

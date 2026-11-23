@@ -14,21 +14,21 @@ export const PipelineStrip: React.FC<PipelineStripProps> = ({ status }) => {
       label: 'Agent Session',
       sub: status.agentStatus === 'active' ? 'Active' : 'Idle',
       icon: Bot,
-      stateColor: 'text-zinc-300 border-zinc-700 bg-zinc-900',
+      stateColor: 'text-[#ECF2EE] border-[#263830] bg-[#0E1317]',
     },
     {
       label: 'JWT Scope',
       sub: status.jwtVerified ? 'Verified' : 'Invalid',
       icon: KeyRound,
-      stateColor: 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20',
+      stateColor: 'text-[#D4F849] border-[#D4F849]/30 bg-[#16221D]',
     },
     {
       label: 'Taint Lattice',
       sub: status.taintState,
       icon: Network,
       stateColor: isTainted
-        ? 'text-red-400 border-red-500/30 bg-red-950/20'
-        : 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20',
+        ? 'text-[#F43F5E] border-[#F43F5E]/30 bg-[#F43F5E]/10'
+        : 'text-[#D4F849] border-[#D4F849]/30 bg-[#16221D]',
     },
     {
       label: 'Policy Gate',
@@ -36,44 +36,44 @@ export const PipelineStrip: React.FC<PipelineStripProps> = ({ status }) => {
       icon: ShieldCheck,
       stateColor:
         status.policyGateVerdict === 'ALLOW'
-          ? 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20'
+          ? 'text-[#D4F849] border-[#D4F849]/30 bg-[#16221D]'
           : status.policyGateVerdict === 'QUARANTINE'
-          ? 'text-amber-400 border-amber-500/30 bg-amber-950/20'
-          : 'text-red-400 border-red-500/30 bg-red-950/20',
+          ? 'text-[#F59E0B] border-[#F59E0B]/30 bg-[#F59E0B]/10'
+          : 'text-[#F43F5E] border-[#F43F5E]/30 bg-[#F43F5E]/10',
     },
     {
       label: 'Target Tool',
       sub: status.targetTool,
       icon: Wrench,
-      stateColor: 'text-zinc-300 border-zinc-700 bg-zinc-900',
+      stateColor: 'text-[#ECF2EE] border-[#263830] bg-[#0E1317]',
     },
   ];
 
   return (
-    <div className="bg-[#111113] border border-[#27272A] rounded p-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-[#16221D] border border-[#263830] rounded p-3">
+      <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#7E9489]">
             Live Interception Pipeline Strip
           </span>
-          {/* Active Provider & Model Badge */}
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[10px] font-mono text-zinc-300">
-            <Cpu className="w-3 h-3 text-zinc-400" />
-            <span className="uppercase text-zinc-400">{status.provider}:</span>
-            <span className="font-semibold text-zinc-200">{status.model}</span>
+          {/* Active Provider Badge */}
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0E1317] border border-[#263830] text-[10px] font-mono text-[#ECF2EE]">
+            <Cpu className="w-3 h-3 text-[#D4F849]" />
+            <span className="uppercase text-[#7E9489]">{status.provider}:</span>
+            <span className="font-semibold text-[#ECF2EE]">{status.model}</span>
           </span>
         </div>
 
         <div className="flex items-center gap-3 text-xs font-mono">
-          <span className="text-zinc-400">
+          <span className="text-[#7E9489]">
             Taint Lattice:{' '}
-            <span className={isTainted ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>
+            <span className={isTainted ? 'text-[#F43F5E] font-semibold' : 'text-[#D4F849] font-semibold'}>
               {status.taintState}
             </span>
           </span>
-          <span className="text-zinc-500">|</span>
-          <span className="text-zinc-400">
-            Overhead: <span className="text-zinc-200 font-semibold">{status.latencyMs.toFixed(2)}ms</span>
+          <span className="text-[#263830]">|</span>
+          <span className="text-[#7E9489]">
+            Overhead: <span className="text-[#ECF2EE] font-semibold">{status.latencyMs.toFixed(2)}ms</span>
           </span>
         </div>
       </div>
@@ -85,18 +85,18 @@ export const PipelineStrip: React.FC<PipelineStripProps> = ({ status }) => {
           return (
             <React.Fragment key={node.label}>
               <div
-                className={`flex-1 min-w-[130px] p-2 rounded border ${node.stateColor} flex flex-col justify-between`}
+                className={`flex-1 min-w-[130px] p-2.5 rounded border ${node.stateColor} flex flex-col justify-between`}
               >
-                <div className="flex items-center gap-1.5 text-zinc-400 mb-1">
+                <div className="flex items-center gap-1.5 text-[#7E9489] mb-1">
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-medium text-zinc-300 truncate">{node.label}</span>
+                  <span className="text-[11px] font-medium text-[#ECF2EE] truncate">{node.label}</span>
                 </div>
                 <div className="font-mono text-xs font-semibold truncate tracking-tight">
                   {node.sub}
                 </div>
               </div>
               {!isLast && (
-                <div className="text-zinc-600 px-0.5">
+                <div className="text-[#7E9489]/50 px-0.5">
                   <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               )}

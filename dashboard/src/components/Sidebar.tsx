@@ -39,27 +39,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-[220px] min-w-[220px] h-screen bg-[#09090B] border-r border-[#27272A] flex flex-col justify-between select-none">
+    <aside className="w-[220px] min-w-[220px] h-screen bg-[#0E1317] border-r border-[#263830] flex flex-col justify-between select-none">
       <div>
         {/* Brand Header */}
-        <div className="p-4 border-b border-[#27272A]">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-100">
-              <Shield className="w-3.5 h-3.5 text-zinc-300" />
+        <div className="p-4 border-b border-[#263830]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded bg-[#16221D] border border-[#263830] flex items-center justify-center text-[#D4F849]">
+              <Shield className="w-3.5 h-3.5 fill-current" />
             </div>
-            <span className="font-semibold tracking-tight text-sm text-zinc-100">
+            <span className="font-semibold tracking-tight text-sm text-[#ECF2EE]">
               AegisVeto
             </span>
           </div>
 
-          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-mono text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="mt-3 flex items-center gap-1.5 px-2 py-1 rounded bg-[#16221D] border border-[#263830] text-[11px] font-mono text-[#7E9489]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D4F849] animate-pulse" />
             <span>Proxy Active · &lt;10ms</span>
           </div>
         </div>
 
         {/* Navigation Items */}
-        <nav className="p-2 space-y-0.5">
+        <nav className="p-2 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -67,18 +67,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors text-left ${
+                className={`relative w-full flex items-center justify-between px-3 py-2 rounded text-xs transition-colors text-left ${
                   isActive
-                    ? 'bg-[#18181B] text-zinc-100 font-medium border border-[#27272A]'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#111113]'
+                    ? 'bg-[#16221D] text-[#ECF2EE] font-medium border border-[#263830]'
+                    : 'text-[#7E9489] hover:text-[#ECF2EE] hover:bg-[#16221D]/40'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-zinc-200' : 'text-zinc-500'}`} />
+                {/* Left Acid Lime indicator bar */}
+                {isActive && (
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-[#D4F849]" />
+                )}
+                <div className="flex items-center gap-2.5">
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D4F849]' : 'text-[#7E9489]'}`} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/30">
                     {item.badge}
                   </span>
                 )}
@@ -89,14 +93,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer System Info */}
-      <div className="p-3 border-t border-[#27272A] text-[11px] text-zinc-500 font-mono">
-        <div className="flex justify-between items-center text-zinc-400">
+      <div className="p-3 border-t border-[#263830] text-[11px] text-[#7E9489] font-mono space-y-1">
+        <div className="flex justify-between items-center">
           <span>Engine</span>
-          <span className="text-zinc-300">Deterministic</span>
+          <span className="text-[#ECF2EE]">Deterministic</span>
         </div>
-        <div className="flex justify-between items-center mt-1">
+        <div className="flex justify-between items-center">
           <span>LLM in Guard</span>
-          <span className="text-emerald-400 font-medium">None (0.00%)</span>
+          <span className="text-[#D4F849] font-medium">None (0.00%)</span>
         </div>
       </div>
     </aside>
