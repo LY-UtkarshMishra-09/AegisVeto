@@ -1,0 +1,57 @@
+# AegisVeto Zero-Trust Security Policy (Deterministic)
+version: "2026-03"
+
+identity:
+  token_algorithm: "EdDSA"
+  issuer: "aegisveto.security.local"
+  max_session_ttl_sec: 900
+
+path_protection:
+  deny_patterns:
+    - "**/.env*"
+    - "**/.ssh/**"
+    - "**/.git/config"
+    - "../"
+  sandbox_root: "./sandbox"
+
+tools:
+  read_file:
+    action: allow
+    trust: trusted
+    deny_paths:
+      - "**/.env*"
+      - "**/.ssh/**"
+      - "**/.git/config"
+
+  read_public_issue:
+    action: allow
+    trust: untrusted
+
+  send_external_email:
+    action: require_approval
+    class: egress
+
+  http_post_webhook:
+    action: require_approval
+    class: egress
+
+  curl_upload:
+    action: require_approval
+    class: egress
+
+  bash_exec:
+    action: quarantine
+    trust: trusted
+    quarantine_patterns:
+      - "rm\\s+-rf"
+      - "sudo"
+      - "chmod\\s+777"
+      - "curl.*\\|.*bash"
+
+taint_engine:
+  propagation: session
+  sink_action_when_tainted: DENY
+  egress_tools:
+    - send_external_email
+    - http_post_webhook
+    - curl_upload
