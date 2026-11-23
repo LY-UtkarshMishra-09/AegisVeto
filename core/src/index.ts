@@ -9,6 +9,8 @@ import { initKeys, issueToken, verifyToken, TokenRequestSchema } from './auth/to
 import { evaluate, loadPolicy, getRawPolicy, EvaluateRequestSchema, EvaluationResult } from './policy/engine.js';
 import { runAgentScenario, RunnerOptions } from './agent/runner.js';
 import { initDb, insertAuditLog, getAuditLogs, getAuditMetrics } from './db/audit.js';
+import { analyzeIntent, AIAssessment } from './ai/intent.js';
+import { suggestPolicyRule, validateAndApplyPolicy } from './ai/patcher.js';
 
 const app = new Hono();
 
@@ -35,6 +37,7 @@ function broadcast(event: string, data: unknown): void {
 interface PendingQuarantine {
   result: EvaluationResult;
   resolve: (action: 'APPROVE' | 'VETO') => void;
+  ai_assessment?: AIAssessment;
 }
 const pendingQuarantines = new Map<string, PendingQuarantine>();
 
@@ -110,6 +113,26 @@ app.post('/evaluate', async (c) => {
   if (result.verdict === 'QUARANTINE') {
     broadcast('quarantine', result);
 
+    // Layer 2 AI Security Brain: Run semantic intent verifier asynchronously
+    analyzeIntent({
+      toolName: result.tool,
+      args: result.args,
+      recentContext: result.reason,
+    })
+      .then((assessment) => {
+        const pending = pendingQuarantines.get(result.id);
+        if (pending) {
+          pending.ai_assessment = assessment;
+        }
+        broadcast('quarantine_analyzed', {
+          id: result.id,
+          ai_assessment: assessment,
+        });
+      })
+      .catch((err) => {
+        console.warn('[L2 Security Brain] Intent analysis warning:', err);
+      });
+
     const resolution = await new Promise<'APPROVE' | 'VETO'>((resolve) => {
       pendingQuarantines.set(result.id, { result, resolve });
     });
@@ -166,8 +189,65 @@ app.get('/quarantine', (c) => {
   const items = Array.from(pendingQuarantines.entries()).map(([quarantineId, pq]) => ({
     quarantine_id: quarantineId,
     ...pq.result,
+    ai_assessment: pq.ai_assessment,
   }));
   return c.json(items);
+});
+
+// POST /policy/suggest — AI Policy Auto-Patcher ("Learn Once, Enforce Forever")
+app.post('/policy/suggest', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const toolName = body.toolName || body.tool || 'unknown_tool';
+  const args = body.args || {};
+  const reason = body.reason || '';
+  const provider = body.provider;
+
+  const suggestion = await suggestPolicyRule({
+    toolName,
+    args,
+    reason,
+    currentPolicyYaml: getRawPolicy(),
+    provider,
+  });
+
+  return c.json(suggestion);
+});
+
+// POST /policy/apply — Validate and apply auto-patched rule
+app.post('/policy/apply', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  let yamlToApply = body.policyYaml;
+
+  if (!yamlToApply && body.suggestedYaml) {
+    yamlToApply = body.suggestedYaml;
+  }
+
+  // If snippet provided, merge/append into policy.yaml
+  if (!yamlToApply && body.snippet) {
+    const current = getRawPolicy();
+    yamlToApply = `${current.trim()}\n\n# Auto-patched rule\n${body.snippet.trim()}\n`;
+  }
+
+  if (!yamlToApply) {
+    return c.json({ error: 'policyYaml, suggestedYaml, or snippet is required' }, 400);
+  }
+
+  const result = validateAndApplyPolicy(yamlToApply);
+  if (!result.success) {
+    return c.json({ error: result.error }, 400);
+  }
+
+  // Hot-reload Layer 1 policy in memory
+  let curr = process.cwd();
+  let policyPath = path.join(curr, 'policy.yaml');
+  while (!fs.existsSync(policyPath) && curr !== path.dirname(curr)) {
+    curr = path.dirname(curr);
+    policyPath = path.join(curr, 'policy.yaml');
+  }
+  loadPolicy(policyPath);
+  broadcast('policy_updated', { timestamp: new Date().toISOString() });
+
+  return c.json({ status: 'applied', policy: getRawPolicy() });
 });
 
 // GET /policy — Raw policy.yaml

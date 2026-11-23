@@ -35,10 +35,16 @@ interface QuarantineResponseItem {
   taint: 'CLEAN' | 'TAINTED';
   reason: string;
   rule_matched?: string;
+  ai_assessment?: {
+    risk_score: number;
+    hijacked: boolean;
+    summary: string;
+  };
 }
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('console');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [provider, setProvider] = useState<LLMProvider>('ollama');
   const [isProtected, setIsProtected] = useState(true);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
@@ -58,6 +64,48 @@ export const App: React.FC = () => {
       model: p === 'ollama' ? 'qwen3:8b' : 'llama-3.3-70b-versatile',
     }));
   };
+
+  // Smooth scroll handler when clicking sidebar nav item
+  const handleNavClick = (tab: NavTab) => {
+    setActiveTab(tab);
+    const section = document.getElementById(tab);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Scroll-spy with IntersectionObserver
+  useEffect(() => {
+    const sectionIds: NavTab[] = ['console', 'quarantine', 'benchmark', 'policy'];
+    const elements = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find visible section with highest intersection ratio
+        const visible = entries.filter((entry) => entry.isIntersecting);
+        if (visible.length > 0) {
+          // Sort by intersection ratio or top position
+          visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          const topEntry = visible[0];
+          if (topEntry?.target?.id) {
+            setActiveTab(topEntry.target.id as NavTab);
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: '-20% 0px -60% 0px',
+        threshold: [0, 0.2, 0.5, 0.8],
+      }
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   // Hydrate on mount from SQLite backend and subscribe to SSE
   useEffect(() => {
@@ -117,6 +165,7 @@ export const App: React.FC = () => {
               riskSummary: it.reason,
               ruleMatched: it.rule_matched || 'QUARANTINE_RULE',
               status: 'PENDING',
+              ai_assessment: it.ai_assessment,
             }))
           );
         }
@@ -213,6 +262,26 @@ export const App: React.FC = () => {
       }
     });
 
+    eventSource.addEventListener('quarantine_analyzed', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setQuarantineQueue((prev) =>
+          prev.map((item) =>
+            item.id === data.id ? { ...item, ai_assessment: data.ai_assessment } : item
+          )
+        );
+      } catch (err) {
+        console.error('SSE quarantine_analyzed parse error:', err);
+      }
+    });
+
+    eventSource.addEventListener('policy_updated', () => {
+      fetch(`${API_BASE}/policy`)
+        .then((r) => r.text())
+        .then((text) => setPolicyYaml(text))
+        .catch((err) => console.warn('Could not reload /policy:', err));
+    });
+
     return () => {
       eventSource.close();
     };
@@ -290,47 +359,65 @@ export const App: React.FC = () => {
     }
   };
 
+  const handlePolicyPatched = () => {
+    fetch(`${API_BASE}/policy`)
+      .then((r) => r.text())
+      .then((text) => setPolicyYaml(text))
+      .catch((err) => console.warn('Could not reload /policy:', err));
+  };
+
   const pendingCount = quarantineQueue.filter((item) => item.status === 'PENDING').length;
 
   return (
-    <div className="flex h-screen bg-[#080B0E] text-[#ECF2EE] overflow-hidden font-sans">
+    <div className="flex min-h-screen bg-[#080B0E] text-[#ECF2EE] font-sans">
+      {/* Sticky Collapsible Left Sidebar */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleNavClick}
         pendingQuarantineCount={pendingCount}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
 
-      <main className="flex-1 h-screen overflow-y-auto p-4 max-w-[1400px]">
-        {activeTab === 'console' && (
-          <LiveConsoleView
-            toolCalls={toolCalls}
-            pipelineStatus={pipelineStatus}
-            stats={stats}
-            provider={provider}
-            setProvider={handleProviderChange}
-            isProtected={isProtected}
-            setIsProtected={setIsProtected}
-            onRunBenign={handleRunBenign}
-            onRunAttack={handleRunAttack}
-            isRunningScenario={isRunningScenario}
-          />
-        )}
+      {/* Main Single-Page Stacked Container */}
+      <main className="flex-1 h-screen overflow-y-auto">
+        <div className="max-w-6xl mx-auto space-y-10 p-6">
+          {/* Section 1: Live Console */}
+          <section id="console" className="scroll-mt-6">
+            <LiveConsoleView
+              toolCalls={toolCalls}
+              pipelineStatus={pipelineStatus}
+              stats={stats}
+              provider={provider}
+              setProvider={handleProviderChange}
+              isProtected={isProtected}
+              setIsProtected={setIsProtected}
+              onRunBenign={handleRunBenign}
+              onRunAttack={handleRunAttack}
+              isRunningScenario={isRunningScenario}
+            />
+          </section>
 
-        {activeTab === 'quarantine' && (
-          <QuarantineView
-            queue={quarantineQueue}
-            onApprove={handleApproveQuarantine}
-            onVeto={handleVetoQuarantine}
-          />
-        )}
+          {/* Section 2: Quarantine Queue */}
+          <section id="quarantine" className="scroll-mt-6">
+            <QuarantineView
+              queue={quarantineQueue}
+              onApprove={handleApproveQuarantine}
+              onVeto={handleVetoQuarantine}
+              onPolicyPatched={handlePolicyPatched}
+            />
+          </section>
 
-        {activeTab === 'benchmark' && (
-          <BenchmarkView metrics={mockBenchmarkMetrics} />
-        )}
+          {/* Section 3: VS Benchmark */}
+          <section id="benchmark" className="scroll-mt-6">
+            <BenchmarkView metrics={mockBenchmarkMetrics} />
+          </section>
 
-        {activeTab === 'policy' && (
-          <PolicyRulesView policyYaml={policyYaml} />
-        )}
+          {/* Section 4: Policy Rules */}
+          <section id="policy" className="scroll-mt-6">
+            <PolicyRulesView policyYaml={policyYaml} />
+          </section>
+        </div>
       </main>
     </div>
   );

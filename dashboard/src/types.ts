@@ -16,6 +16,12 @@ export interface ToolCall {
   responsePayload?: Record<string, unknown> | string;
 }
 
+export interface AIAssessment {
+  risk_score: number;
+  hijacked: boolean;
+  summary: string;
+}
+
 export interface QuarantineItem {
   id: string;
   session: string;
@@ -26,6 +32,7 @@ export interface QuarantineItem {
   riskSummary: string;
   ruleMatched: string;
   status: 'PENDING' | 'APPROVED' | 'VETOED';
+  ai_assessment?: AIAssessment;
 }
 
 export interface BenchmarkMetric {
