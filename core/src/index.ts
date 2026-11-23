@@ -3,9 +3,12 @@ import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 import { serve } from '@hono/node-server';
 import path from 'node:path';
+import fs from 'node:fs';
 
 import { initKeys, issueToken, verifyToken, TokenRequestSchema } from './auth/tokens.js';
 import { evaluate, loadPolicy, getRawPolicy, EvaluateRequestSchema, EvaluationResult } from './policy/engine.js';
+import { runAgentScenario, RunnerOptions } from './agent/runner.js';
+import { initDb, insertAuditLog, getAuditLogs, getAuditMetrics } from './db/audit.js';
 
 const app = new Hono();
 
@@ -81,8 +84,27 @@ app.post('/evaluate', async (c) => {
     max_calls: tokenPayload.max_calls,
   });
 
-  auditLog.push(result);
-  broadcast('evaluation', result);
+  // Record to SQLite audit database
+  insertAuditLog({
+    id: result.id,
+    timestamp: result.timestamp,
+    session_id: result.session_id,
+    provider: 'direct',
+    model: 'deterministic',
+    tool_name: result.tool,
+    taint_state: result.taint,
+    decision: result.verdict,
+    latency_ms: result.latency_ms,
+    reason: result.reason,
+    payload_json: JSON.stringify(result.args),
+    mode: 'protected',
+  });
+
+  broadcast('evaluation', {
+    ...result,
+    provider: 'direct',
+    model: 'deterministic',
+  });
 
   // If QUARANTINE, hold the response until resolved
   if (result.verdict === 'QUARANTINE') {
@@ -119,6 +141,23 @@ app.post('/quarantine/:id/resolve', async (c) => {
   }
 
   pending.resolve(action);
+
+  // Record quarantine resolution in SQLite
+  insertAuditLog({
+    id: `res-${id}-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    session_id: pending.result.session_id,
+    provider: 'operator',
+    model: 'human-in-the-loop',
+    tool_name: pending.result.tool,
+    taint_state: pending.result.taint,
+    decision: action === 'APPROVE' ? 'ALLOW' : 'DENY',
+    latency_ms: 0,
+    reason: `Quarantine manually ${action === 'APPROVE' ? 'Approved' : 'Vetoed'} by operator`,
+    payload_json: JSON.stringify(pending.result.args),
+    mode: 'quarantine_resolution',
+  });
+
   return c.json({ status: 'resolved', id, action });
 });
 
@@ -136,9 +175,16 @@ app.get('/policy', (c) => {
   return c.text(getRawPolicy());
 });
 
-// GET /logs — Audit log
+// GET /audit — SQLite logs + KPI metrics
+app.get('/audit', (c) => {
+  const logs = getAuditLogs(100);
+  const metrics = getAuditMetrics(pendingQuarantines.size);
+  return c.json({ logs, metrics });
+});
+
+// GET /logs — Backward-compatible endpoint returning raw SQLite logs
 app.get('/logs', (c) => {
-  return c.json(auditLog);
+  return c.json(getAuditLogs(100));
 });
 
 // GET /events — SSE stream
@@ -160,6 +206,82 @@ app.get('/events', (c) => {
   });
 });
 
+// POST /demo/run — Run scenario through agent runner
+app.post('/demo/run', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const scenario = body.scenario === 'attack' ? 'attack' : 'benign';
+  const isProtected = body.protected !== false;
+  const provider = (body.provider as RunnerOptions['provider']) || 'ollama';
+
+  const result = await runAgentScenario({
+    scenario,
+    protected: isProtected,
+    provider,
+  });
+
+  // Persist execution steps in SQLite and broadcast evaluation events
+  for (const step of result.trace) {
+    if (step.evaluation) {
+      insertAuditLog({
+        id: step.evaluation.id,
+        timestamp: step.evaluation.timestamp,
+        session_id: result.session_id,
+        provider: result.provider,
+        model: result.model,
+        tool_name: step.evaluation.tool,
+        taint_state: step.evaluation.taint,
+        decision: step.evaluation.verdict,
+        latency_ms: step.evaluation.latency_ms,
+        reason: step.evaluation.reason,
+        payload_json: JSON.stringify(step.evaluation.args),
+        mode: isProtected ? 'protected' : 'raw',
+      });
+
+      broadcast('evaluation', {
+        ...step.evaluation,
+        provider: result.provider,
+        model: result.model,
+      });
+    } else if (step.type === 'tool_call' && !isProtected) {
+      const toolName = step.tool || 'unknown';
+      const syntheticId = `raw-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const timestamp = new Date().toISOString();
+
+      insertAuditLog({
+        id: syntheticId,
+        timestamp,
+        session_id: result.session_id,
+        provider: result.provider,
+        model: result.model,
+        tool_name: toolName,
+        taint_state: 'TAINTED',
+        decision: 'ALLOW',
+        latency_ms: 0.05,
+        reason: 'RAW_UNPROTECTED: AegisVeto bypassed by test configuration',
+        payload_json: JSON.stringify(step.args || {}),
+        mode: 'raw',
+      });
+
+      broadcast('evaluation', {
+        id: syntheticId,
+        timestamp,
+        session_id: result.session_id,
+        provider: result.provider,
+        model: result.model,
+        tool: toolName,
+        args: step.args || {},
+        taint: 'TAINTED',
+        verdict: 'ALLOW',
+        latency_ms: 0.05,
+        reason: 'RAW_UNPROTECTED: AegisVeto bypassed by test configuration',
+      });
+    }
+  }
+
+  broadcast('demo_run', result);
+  return c.json(result);
+});
+
 // Health check
 app.get('/', (c) => {
   return c.json({ service: 'aegisveto-core', status: 'active', engine: 'deterministic', llm_in_guard: false });
@@ -167,8 +289,17 @@ app.get('/', (c) => {
 
 // ─── Start ───────────────────────────────────────────────────────
 async function main(): Promise<void> {
+  // Initialize SQLite database
+  initDb();
+  console.log('[AegisVeto] SQLite audit database initialized');
+
   // Load policy from project root
-  const policyPath = path.resolve(process.cwd(), 'policy.yaml');
+  let curr = process.cwd();
+  let policyPath = path.join(curr, 'policy.yaml');
+  while (!fs.existsSync(policyPath) && curr !== path.dirname(curr)) {
+    curr = path.dirname(curr);
+    policyPath = path.join(curr, 'policy.yaml');
+  }
   loadPolicy(policyPath);
   console.log('[AegisVeto] Policy loaded from', policyPath);
 

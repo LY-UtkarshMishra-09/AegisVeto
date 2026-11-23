@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { ToolCall, Verdict, TaintState } from '../types';
+import { ToolCall, Verdict, TaintState, LLMProvider } from '../types';
 
 interface StreamTableProps {
   toolCalls: ToolCall[];
@@ -44,6 +44,14 @@ export const StreamTable: React.FC<StreamTableProps> = ({ toolCalls }) => {
     );
   };
 
+  const getProviderBadge = (provider: LLMProvider) => {
+    return (
+      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 uppercase">
+        {provider}
+      </span>
+    );
+  };
+
   return (
     <div className="bg-[#111113] border border-[#27272A] rounded overflow-hidden flex flex-col">
       <div className="p-3 border-b border-[#27272A] flex items-center justify-between">
@@ -62,6 +70,7 @@ export const StreamTable: React.FC<StreamTableProps> = ({ toolCalls }) => {
               <th className="py-2 px-3 w-8"></th>
               <th className="py-2 px-3">Time</th>
               <th className="py-2 px-3">Session</th>
+              <th className="py-2 px-3">Provider</th>
               <th className="py-2 px-3">Tool</th>
               <th className="py-2 px-3">Taint</th>
               <th className="py-2 px-3">Verdict</th>
@@ -87,6 +96,7 @@ export const StreamTable: React.FC<StreamTableProps> = ({ toolCalls }) => {
                     </td>
                     <td className="py-2 px-3 text-zinc-400 whitespace-nowrap">{call.timestamp}</td>
                     <td className="py-2 px-3 text-zinc-300 font-semibold">{call.session}</td>
+                    <td className="py-2 px-3 whitespace-nowrap">{getProviderBadge(call.provider)}</td>
                     <td className="py-2 px-3 text-zinc-100 font-medium">
                       <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-[11px] border border-zinc-700">
                         {call.tool}
@@ -102,7 +112,7 @@ export const StreamTable: React.FC<StreamTableProps> = ({ toolCalls }) => {
 
                   {isExpanded && (
                     <tr className="bg-[#09090B]">
-                      <td colSpan={8} className="p-3 border-t border-[#27272A]">
+                      <td colSpan={9} className="p-3 border-t border-[#27272A]">
                         <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                           <div>
                             <div className="text-[10px] uppercase text-zinc-500 mb-1">
@@ -121,6 +131,7 @@ export const StreamTable: React.FC<StreamTableProps> = ({ toolCalls }) => {
                                 {
                                   verdict: call.verdict,
                                   taintState: call.taint,
+                                  provider: call.provider,
                                   reason: call.reason,
                                   payload: call.responsePayload,
                                 },

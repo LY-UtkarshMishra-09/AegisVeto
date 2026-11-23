@@ -1,10 +1,12 @@
 export type Verdict = 'ALLOW' | 'DENY' | 'QUARANTINE';
 export type TaintState = 'CLEAN' | 'TAINTED';
+export type LLMProvider = 'ollama' | 'groq';
 
 export interface ToolCall {
   id: string;
   timestamp: string;
   session: string;
+  provider: LLMProvider;
   tool: string;
   args: Record<string, unknown>;
   taint: TaintState;
@@ -37,6 +39,8 @@ export interface BenchmarkMetric {
 
 export interface PipelineStatus {
   agentStatus: 'active' | 'idle';
+  provider: LLMProvider;
+  model: string;
   jwtVerified: boolean;
   taintState: TaintState;
   policyGateVerdict: Verdict;

@@ -65,48 +65,52 @@ export function getRawPolicy(): string {
 }
 
 // ─── Path Security ───────────────────────────────────────────────
-const SANDBOX_ROOT = path.resolve('./sandbox');
+function findRepoRoot(): string {
+  let curr = process.cwd();
+  while (curr !== path.dirname(curr)) {
+    if (fs.existsSync(path.join(curr, 'policy.yaml'))) return curr;
+    curr = path.dirname(curr);
+  }
+  return process.cwd();
+}
+
+const SANDBOX_ROOT = path.join(findRepoRoot(), 'sandbox');
 
 function isPathDenied(filePath: string): { denied: boolean; rule: string } {
-  // Normalize the path
-  const normalized = path.normalize(filePath);
+  // Convert all slashes to forward slashes and trim relative prefixes
+  const normalized = filePath.replace(/\\/g, '/').replace(/^\.\//, '');
+  const baseName = path.basename(filePath);
 
   // Check path traversal: does resolved path escape sandbox?
-  const resolved = path.resolve(SANDBOX_ROOT, normalized);
-  if (!resolved.startsWith(SANDBOX_ROOT)) {
+  const resolved = path.resolve(SANDBOX_ROOT, filePath.replace(/^sandbox[/\\]?/, ''));
+  if (filePath.includes('..') || (!resolved.startsWith(SANDBOX_ROOT) && !filePath.startsWith('sandbox'))) {
     return { denied: true, rule: 'PATH_TRAVERSAL_ESCAPE' };
+  }
+
+  // Hard deny on secret file patterns
+  if (
+    baseName.startsWith('.env') ||
+    normalized.includes('.env') ||
+    normalized.includes('.ssh') ||
+    normalized.includes('.git/config')
+  ) {
+    return { denied: true, rule: 'SECRET_PROTECTION_ENV' };
   }
 
   // Check explicit deny patterns
   const denyPatterns = policyConfig.path_protection.deny_patterns;
   for (const pattern of denyPatterns) {
-    if (pattern === '../' && filePath.includes('..')) {
+    const cleanPattern = pattern.replace(/\\/g, '/');
+    if (cleanPattern === '../' && filePath.includes('..')) {
       return { denied: true, rule: 'PATH_TRAVERSAL_DOTDOT' };
     }
-    // Convert glob-like pattern to regex
-    const regexStr = pattern
+
+    const regexStr = cleanPattern
       .replace(/\*\*/g, '.*')
       .replace(/\*/g, '[^/]*')
       .replace(/\./g, '\\.');
-    // Re-unescape the \\.* that came from ** conversion
-    const finalRegex = regexStr.replace(/\\\.\*/g, '.*');
-    if (new RegExp(finalRegex).test(normalized)) {
+    if (new RegExp(regexStr).test(normalized) || new RegExp(regexStr).test(baseName)) {
       return { denied: true, rule: `DENY_PATTERN:${pattern}` };
-    }
-  }
-
-  // Check tool-specific deny_paths
-  const toolConfig = policyConfig.tools['read_file'];
-  if (toolConfig?.deny_paths) {
-    for (const pattern of toolConfig.deny_paths) {
-      const regexStr = pattern
-        .replace(/\*\*/g, '.*')
-        .replace(/\*/g, '[^/]*')
-        .replace(/\./g, '\\.');
-      const finalRegex = regexStr.replace(/\\\.\*/g, '.*');
-      if (new RegExp(finalRegex).test(normalized)) {
-        return { denied: true, rule: `TOOL_DENY_PATH:${pattern}` };
-      }
     }
   }
 
@@ -118,7 +122,7 @@ let evalCounter = 0;
 
 export function evaluate(req: EvaluationRequest): EvaluationResult {
   const start = performance.now();
-  const id = `eval-${++evalCounter}`;
+  const id = `eval-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const timestamp = new Date().toISOString();
 
   // Ensure session state exists

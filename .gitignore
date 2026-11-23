@@ -7,18 +7,33 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+core/dist/
+dashboard/dist/
 
-# Environment & Secrets
-.env
+# Environment & Secrets (Root)
+/.env
 .env.local
 .env.*.local
 !.env.example
+!sandbox/.env
 
 # SQLite & Runtime Storage
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
 
 # Logs
 logs/

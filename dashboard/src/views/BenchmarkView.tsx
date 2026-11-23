@@ -46,26 +46,30 @@ export const BenchmarkView: React.FC<BenchmarkViewProps> = ({ metrics }) => {
         </table>
       </div>
 
-      {/* Live Session Run Summary */}
+      {/* Live Ollama vs Groq Session Runs Summary */}
       <div className="bg-[#111113] border border-[#27272A] rounded p-3 space-y-2">
         <div className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">
-          Live Session Run Summary
+          Live Session Runs: Ollama (Local) vs. Groq (Cloud)
         </div>
-        <div className="grid grid-cols-3 gap-3 font-mono text-xs">
-          <div className="p-2.5 rounded bg-[#09090B] border border-[#27272A]">
-            <div className="text-[10px] text-zinc-500 uppercase">Deterministic AST Parser</div>
-            <div className="text-zinc-200 font-semibold mt-1">Active (Strict Mode)</div>
-            <div className="text-[10px] text-zinc-400 mt-0.5">Path normalization + Traversal trap</div>
+        <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div className="p-3 rounded bg-[#09090B] border border-[#27272A] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-200 font-semibold">Ollama (qwen3:8b)</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">LOCAL</span>
+            </div>
+            <div className="text-zinc-400 text-[11px]">Unprotected exfiltrations: <span className="text-red-400 font-semibold">100% Vulnerable</span></div>
+            <div className="text-zinc-400 text-[11px]">AegisVeto Veto Rate: <span className="text-emerald-400 font-semibold">100% Blocked</span></div>
+            <div className="text-zinc-500 text-[10px]">Overhead added by proxy: 1.82 ms</div>
           </div>
-          <div className="p-2.5 rounded bg-[#09090B] border border-[#27272A]">
-            <div className="text-[10px] text-zinc-500 uppercase">Taint Lattice State</div>
-            <div className="text-emerald-400 font-semibold mt-1">Mathematical Guarantee</div>
-            <div className="text-[10px] text-zinc-400 mt-0.5">Untrusted input &rarr; Sink block</div>
-          </div>
-          <div className="p-2.5 rounded bg-[#09090B] border border-[#27272A]">
-            <div className="text-[10px] text-zinc-500 uppercase">In-Memory Policy Engine</div>
-            <div className="text-zinc-200 font-semibold mt-1">1.84ms Average Latency</div>
-            <div className="text-[10px] text-zinc-400 mt-0.5">Zero external API dependencies</div>
+
+          <div className="p-3 rounded bg-[#09090B] border border-[#27272A] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-200 font-semibold">Groq (llama-3.3-70b)</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">CLOUD</span>
+            </div>
+            <div className="text-zinc-400 text-[11px]">Unprotected exfiltrations: <span className="text-red-400 font-semibold">100% Vulnerable</span></div>
+            <div className="text-zinc-400 text-[11px]">AegisVeto Veto Rate: <span className="text-emerald-400 font-semibold">100% Blocked</span></div>
+            <div className="text-zinc-500 text-[10px]">Overhead added by proxy: 1.85 ms</div>
           </div>
         </div>
       </div>

@@ -1,19 +1,15 @@
 import React from 'react';
-import { Play, ShieldAlert, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Play, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 interface ReplayCardsProps {
   onRunBenign: () => void;
   onRunAttack: () => void;
-  isProtected: boolean;
-  setIsProtected: (v: boolean) => void;
   isRunningScenario: boolean;
 }
 
 export const ReplayCards: React.FC<ReplayCardsProps> = ({
   onRunBenign,
   onRunAttack,
-  isProtected,
-  setIsProtected,
   isRunningScenario,
 }) => {
   return (
@@ -23,7 +19,7 @@ export const ReplayCards: React.FC<ReplayCardsProps> = ({
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Scenario A · Benign Workflow
+              <CheckCircle2 className="w-3.5 h-3.5" /> Scenario A · Benign Task
             </span>
             <span className="text-[11px] font-mono text-zinc-500">Expected: ALLOW</span>
           </div>
@@ -55,30 +51,7 @@ export const ReplayCards: React.FC<ReplayCardsProps> = ({
             <span className="text-[11px] font-mono uppercase tracking-wider text-red-400 flex items-center gap-1.5 font-medium">
               <ShieldAlert className="w-3.5 h-3.5" /> Scenario B · Indirect Prompt Injection
             </span>
-
-            {/* Protection Toggle */}
-            <div className="flex items-center gap-1.5 bg-[#09090B] border border-[#27272A] p-0.5 rounded text-[10px] font-mono">
-              <button
-                onClick={() => setIsProtected(true)}
-                className={`px-1.5 py-0.5 rounded transition-colors ${
-                  isProtected
-                    ? 'bg-emerald-500/20 text-emerald-300 font-medium'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >
-                Protected (AegisVeto)
-              </button>
-              <button
-                onClick={() => setIsProtected(false)}
-                className={`px-1.5 py-0.5 rounded transition-colors ${
-                  !isProtected
-                    ? 'bg-red-500/20 text-red-300 font-medium'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >
-                Unprotected (Raw)
-              </button>
-            </div>
+            <span className="text-[11px] font-mono text-zinc-500">Expected: VETO</span>
           </div>
 
           <h4 className="text-xs font-medium text-zinc-200 mt-1">
@@ -90,13 +63,7 @@ export const ReplayCards: React.FC<ReplayCardsProps> = ({
         </div>
 
         <div className="mt-3 pt-2 border-t border-[#27272A] flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-[11px] font-mono">
-            <ShieldCheck className="w-3.5 h-3.5 text-zinc-500" />
-            <span className={isProtected ? 'text-emerald-400' : 'text-red-400 font-medium'}>
-              {isProtected ? 'Veto Active' : 'Unprotected Vulnerable'}
-            </span>
-          </div>
-
+          <span className="text-[11px] font-mono text-zinc-500">Tool: read_public_issue &rarr; send_external_email</span>
           <button
             onClick={onRunAttack}
             disabled={isRunningScenario}

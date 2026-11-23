@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, KeyRound, Network, ShieldCheck, Wrench, ArrowRight } from 'lucide-react';
+import { Bot, KeyRound, Network, ShieldCheck, Wrench, ArrowRight, Cpu } from 'lucide-react';
 import { PipelineStatus } from '../types';
 
 interface PipelineStripProps {
@@ -52,9 +52,18 @@ export const PipelineStrip: React.FC<PipelineStripProps> = ({ status }) => {
   return (
     <div className="bg-[#111113] border border-[#27272A] rounded p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-          Live Interception Pipeline Strip
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+            Live Interception Pipeline Strip
+          </span>
+          {/* Active Provider & Model Badge */}
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[10px] font-mono text-zinc-300">
+            <Cpu className="w-3 h-3 text-zinc-400" />
+            <span className="uppercase text-zinc-400">{status.provider}:</span>
+            <span className="font-semibold text-zinc-200">{status.model}</span>
+          </span>
+        </div>
+
         <div className="flex items-center gap-3 text-xs font-mono">
           <span className="text-zinc-400">
             Taint Lattice:{' '}
@@ -64,7 +73,7 @@ export const PipelineStrip: React.FC<PipelineStripProps> = ({ status }) => {
           </span>
           <span className="text-zinc-500">|</span>
           <span className="text-zinc-400">
-            Pipeline Overhead: <span className="text-zinc-200 font-semibold">{status.latencyMs.toFixed(2)}ms</span>
+            Overhead: <span className="text-zinc-200 font-semibold">{status.latencyMs.toFixed(2)}ms</span>
           </span>
         </div>
       </div>
