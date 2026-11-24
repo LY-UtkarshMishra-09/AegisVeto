@@ -380,9 +380,9 @@ node core/node_modules/tsx/dist/cli.mjs scripts/test-dataplane.ts
 
 ## Authors and Maintainers
 
-- Utkarsh Mishra (Lead Architecture & Core Engine)
-- [Contributor Name / GitHub Handle]
-- [Contributor Name / GitHub Handle]
+- Utkarsh Mishra ([@LY-UtkarshMishra-09](https://github.com/LY-UtkarshMishra-09))
+- Tanishk Soni ([@Tanishkcse777](https://github.com/Tanishkcse777))
+- Kartikey Mishra ([@kartikey-svg](https://github.com/kartikey-svg))
 
 ---
 
