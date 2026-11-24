@@ -1,6 +1,22 @@
-# AegisVeto Python SDK, Client & Benchmark Harness
+# ==============================================================================
+# AegisVeto Python SDK, Client & Benchmark Harness Requirements
+# ==============================================================================
+
+# Model Context Protocol (MCP) Official SDK
+mcp>=1.2.0
+
+# LLM Gateway & OpenAI-Compatible Client
 openai>=1.50.0
-pyyaml>=6.0.1
+
+# HTTP & Streaming Clients (SSE / Webhooks)
 requests>=2.31.0
-python-dotenv>=1.0.1
+httpx>=0.27.0
+httpx-sse>=0.4.0
+
+# Data Validation & Serialization
 pydantic>=2.7.0
+pyyaml>=6.0.1
+
+# Environment & Cryptography (Ed25519 Token Verification)
+python-dotenv>=1.0.1
+cryptography>=42.0.0

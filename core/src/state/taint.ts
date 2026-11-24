@@ -4,6 +4,9 @@ interface SessionState {
   taint: TaintState;
   callCount: number;
   maxCalls: number;
+  terminated: boolean;
+  terminatedAt?: string;
+  terminateReason?: string;
   taintedAt?: string;
   taintReason?: string;
 }
@@ -13,7 +16,7 @@ const sessions = new Map<string, SessionState>();
 export function getOrCreateSession(sessionId: string, maxCalls: number): SessionState {
   let state = sessions.get(sessionId);
   if (!state) {
-    state = { taint: 'CLEAN', callCount: 0, maxCalls };
+    state = { taint: 'CLEAN', callCount: 0, maxCalls, terminated: false };
     sessions.set(sessionId, state);
   }
   return state;
@@ -21,6 +24,18 @@ export function getOrCreateSession(sessionId: string, maxCalls: number): Session
 
 export function getTaint(sessionId: string): TaintState {
   return sessions.get(sessionId)?.taint ?? 'CLEAN';
+}
+
+export function isTerminated(sessionId: string): boolean {
+  return sessions.get(sessionId)?.terminated ?? false;
+}
+
+export function markTerminated(sessionId: string, reason: string): void {
+  const state = getOrCreateSession(sessionId, 50);
+  state.terminated = true;
+  state.taint = 'TAINTED';
+  state.terminatedAt = new Date().toISOString();
+  state.terminateReason = reason;
 }
 
 export function markTainted(sessionId: string, reason: string): void {

@@ -7,15 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        midnight: '#080B0E',
-        'midnight-surface': '#0E1317',
-        'sage-deep': '#16221D',
-        'sage-border': '#263830',
-        'sage-muted': '#7E9489',
-        'acid-lime': '#D4F849',
-        ink: '#ECF2EE',
-        'amber-warn': '#F59E0B',
-        'crimson-veto': '#F43F5E',
+        canvas: '#000000',
+        panel: '#09090B',
+        elevated: '#141417',
+        hairline: '#1E1E22',
+        ink: '#F4F6F8',
+        muted: '#8E95A2',
+        cobalt: '#2563EB',
+        'cobalt-hover': '#1D4ED8',
+        'cobalt-light': '#4D8BFF',
+        danger: '#EF4444',
+        warning: '#F59E0B',
       },
       fontFamily: {
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],

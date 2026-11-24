@@ -1,12 +1,22 @@
 import React from 'react';
-import { Shield, Activity, ShieldAlert, BarChart3, FileCode, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import {
+  Shield,
+  LayoutDashboard,
+  ScrollText,
+  ShieldAlert,
+  Cpu,
+  FileCode2,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 
-export type NavTab = 'console' | 'quarantine' | 'benchmark' | 'policy';
+export type NavTab = 'overview' | 'logs' | 'approvals' | 'inventory' | 'policies' | 'settings';
 
 interface SidebarProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
-  pendingQuarantineCount: number;
+  pendingApprovalsCount: number;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -14,137 +24,145 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
-  pendingQuarantineCount,
+  pendingApprovalsCount,
   isCollapsed,
   onToggleCollapse,
 }) => {
   const navItems = [
     {
-      id: 'console' as NavTab,
-      label: 'Live Console',
-      icon: Activity,
+      id: 'overview' as NavTab,
+      label: 'Overview',
+      icon: LayoutDashboard,
     },
     {
-      id: 'quarantine' as NavTab,
-      label: 'Quarantine Queue',
+      id: 'logs' as NavTab,
+      label: 'Audit Stream',
+      icon: ScrollText,
+    },
+    {
+      id: 'approvals' as NavTab,
+      label: 'Approvals',
       icon: ShieldAlert,
-      badge: pendingQuarantineCount > 0 ? pendingQuarantineCount : undefined,
+      badge: pendingApprovalsCount,
     },
     {
-      id: 'benchmark' as NavTab,
-      label: 'VS Benchmark',
-      icon: BarChart3,
+      id: 'inventory' as NavTab,
+      label: 'Inventory',
+      icon: Cpu,
     },
     {
-      id: 'policy' as NavTab,
-      label: 'Policy Rules',
-      icon: FileCode,
+      id: 'policies' as NavTab,
+      label: 'Policies',
+      icon: FileCode2,
+    },
+    {
+      id: 'settings' as NavTab,
+      label: 'Settings',
+      icon: Settings,
     },
   ];
 
   return (
     <aside
-      className={`sticky top-0 h-screen bg-[#0E1317] border-r border-[#263830] flex flex-col justify-between select-none transition-all duration-200 z-30 ${
-        isCollapsed ? 'w-[64px] min-w-[64px]' : 'w-[220px] min-w-[220px]'
+      className={`h-screen bg-[#000000] border-r border-[#1E1E22] flex flex-col transition-all duration-200 select-none z-30 ${
+        isCollapsed ? 'w-16' : 'w-56'
       }`}
     >
-      <div>
-        {/* Brand Header */}
-        <div className={`p-3.5 border-b border-[#263830] ${isCollapsed ? 'flex flex-col items-center gap-2' : ''}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded bg-[#16221D] border border-[#263830] flex items-center justify-center text-[#D4F849] shrink-0">
-                <Shield className="w-3.5 h-3.5 fill-current" />
-              </div>
-              {!isCollapsed && (
-                <span className="font-semibold tracking-tight text-sm text-[#ECF2EE]">
-                  AegisVeto
-                </span>
-              )}
-            </div>
-
-            <button
-              onClick={onToggleCollapse}
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="p-1 rounded text-[#7E9489] hover:text-[#ECF2EE] hover:bg-[#16221D] transition-colors"
-            >
-              {isCollapsed ? (
-                <PanelLeftOpen className="w-4 h-4" />
-              ) : (
-                <PanelLeftClose className="w-4 h-4" />
-              )}
-            </button>
+      {/* Top Header with Shield Emblem */}
+      <div className="h-12 border-b border-[#1E1E22] px-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#141417] border border-[#1E1E22] flex items-center justify-center shrink-0">
+            <Shield className="w-4 h-4 text-[#F4F6F8] stroke-[1.5]" />
           </div>
-
-          {/* Status pill / dot */}
-          {!isCollapsed ? (
-            <div className="mt-2.5 flex items-center gap-1.5 px-2 py-1 rounded bg-[#16221D] border border-[#263830] text-[11px] font-mono text-[#7E9489]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D4F849] animate-pulse shrink-0" />
-              <span className="truncate">Proxy Active · &lt;10ms</span>
-            </div>
-          ) : (
-            <div className="mt-1" title="Proxy Active · <10ms">
-              <span className="w-2 h-2 rounded-full bg-[#D4F849] animate-pulse block" />
+          {!isCollapsed && (
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-xs font-mono font-medium tracking-tight text-[#F4F6F8] truncate">
+                AegisVeto
+              </span>
+              <span className="text-[10px] font-mono text-[#8E95A2] tracking-wider truncate">
+                GATEWAY L1
+              </span>
             </div>
           )}
         </div>
 
-        {/* Navigation Items */}
-        <nav className="p-2 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                title={item.label}
-                className={`relative w-full flex items-center rounded text-xs transition-colors ${
-                  isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
-                } ${
-                  isActive
-                    ? 'bg-[#16221D] text-[#ECF2EE] font-medium border border-[#263830]'
-                    : 'text-[#7E9489] hover:text-[#ECF2EE] hover:bg-[#16221D]/40'
-                }`}
-              >
-                {/* Left Acid Lime indicator bar */}
-                {isActive && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-[#D4F849]" />
-                )}
-
-                <div className={`flex items-center gap-2.5 ${isCollapsed ? 'justify-center' : ''}`}>
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#D4F849]' : 'text-[#7E9489]'}`} />
-                  {!isCollapsed && <span>{item.label}</span>}
-                </div>
-
-                {item.badge !== undefined && (
-                  isCollapsed ? (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#F59E0B]" />
-                  ) : (
-                    <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/30">
-                      {item.badge}
-                    </span>
-                  )
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        {!isCollapsed && (
+          <button
+            onClick={onToggleCollapse}
+            className="text-[#8E95A2] hover:text-[#F4F6F8] p-1 transition-colors"
+            title="Collapse sidebar"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* Footer System Info (hidden when collapsed) */}
-      {!isCollapsed && (
-        <div className="p-3 border-t border-[#263830] text-[11px] text-[#7E9489] font-mono space-y-1">
-          <div className="flex justify-between items-center">
-            <span>Engine</span>
-            <span className="text-[#ECF2EE]">Deterministic</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span>LLM in Guard</span>
-            <span className="text-[#D4F849] font-medium">None (0.00%)</span>
-          </div>
+      {/* Nav List */}
+      <nav className="p-2 space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              title={isCollapsed ? item.label : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-mono transition-colors relative ${
+                isActive
+                  ? 'bg-[#141417] text-[#F4F6F8]'
+                  : 'text-[#8E95A2] hover:text-[#F4F6F8] hover:bg-[#141417]/50'
+              }`}
+            >
+              <Icon
+                className={`w-4 h-4 shrink-0 stroke-[1.5] ${
+                  isActive ? 'text-[#4D8BFF]' : 'text-[#8E95A2]'
+                }`}
+              />
+
+              {!isCollapsed && <span className="truncate">{item.label}</span>}
+
+              {/* Badge */}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span
+                  className={`flex items-center justify-center text-[10px] font-mono font-medium text-[#000000] bg-[#F59E0B] rounded-full shrink-0 ${
+                    isCollapsed
+                      ? 'absolute top-1.5 right-1.5 w-2 h-2 p-0'
+                      : 'ml-auto px-1.5 py-0.2 min-w-[18px]'
+                  }`}
+                >
+                  {!isCollapsed && item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Wide Empty Middle Spacer */}
+      <div className="flex-1" />
+
+      {/* Collapse Toggle for Collapsed Rail */}
+      {isCollapsed && (
+        <div className="p-2 border-t border-[#1E1E22] flex justify-center">
+          <button
+            onClick={onToggleCollapse}
+            className="text-[#8E95A2] hover:text-[#F4F6F8] p-1.5 transition-colors"
+            title="Expand sidebar"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
+
+      {/* Bottom Proxy Status */}
+      <div className="h-11 border-t border-[#1E1E22] px-3 flex items-center justify-center sm:justify-start gap-2 bg-[#000000]">
+        <div className="w-2 h-2 rounded-full bg-[#4D8BFF] shrink-0" />
+        {!isCollapsed && (
+          <div className="text-[11px] font-mono text-[#8E95A2] truncate">
+            Proxy :3000
+          </div>
+        )}
+      </div>
     </aside>
   );
 };

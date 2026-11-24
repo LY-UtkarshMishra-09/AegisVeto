@@ -7,6 +7,6 @@ export default defineConfig({
     preserveSymlinks: true,
   },
   server: {
-    port: 5173,
+    port: 5000,
   },
 });

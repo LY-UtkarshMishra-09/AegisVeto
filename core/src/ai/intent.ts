@@ -1,21 +1,6 @@
-import OpenAI from 'openai';
-import path from 'node:path';
-import fs from 'node:fs';
-import dotenv from 'dotenv';
+import { getLayer2Client, LLMProvider } from './client.js';
 
-function findRepoRoot(): string {
-  let curr = process.cwd();
-  while (curr !== path.dirname(curr)) {
-    if (fs.existsSync(path.join(curr, 'policy.yaml'))) return curr;
-    curr = path.dirname(curr);
-  }
-  return process.cwd();
-}
-
-dotenv.config({ path: path.join(findRepoRoot(), '.env') });
-dotenv.config();
-
-export type LLMProvider = 'ollama' | 'groq';
+export type { LLMProvider };
 
 export interface AIAssessment {
   risk_score: number; // 0 - 100
@@ -31,29 +16,8 @@ export interface IntentAnalysisParams {
   provider?: LLMProvider;
 }
 
-function getAiClient(provider: LLMProvider): { client: OpenAI; model: string } {
-  if (provider === 'groq') {
-    return {
-      client: new OpenAI({
-        baseURL: 'https://api.groq.com/openai/v1',
-        apiKey: process.env.GROQ_API_KEY || 'dummy_groq_key',
-      }),
-      model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
-    };
-  }
-
-  return {
-    client: new OpenAI({
-      baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
-      apiKey: 'ollama',
-    }),
-    model: process.env.OLLAMA_MODEL || 'qwen3:8b',
-  };
-}
-
 export async function analyzeIntent(params: IntentAnalysisParams): Promise<AIAssessment> {
-  const provider = params.provider || ((process.env.LLM_PROVIDER as LLMProvider) || 'groq');
-  const { client, model } = getAiClient(provider);
+  const { client, model } = getLayer2Client();
 
   const prompt = `You are the Layer 2 Security Brain of AegisVeto.
 A tool invocation has been paused for quarantine in an autonomous agent session.
@@ -92,8 +56,11 @@ Respond with ONLY valid JSON with this exact shape:
       };
     }
   } catch (err) {
-    // Graceful deterministic fallback if provider is offline/unreachable
-    console.warn('[AegisVeto L2 Intent] Provider call failed, using deterministic heuristic fallback:', err instanceof Error ? err.message : err);
+    // Graceful deterministic fallback if provider is offline or unreachable
+    console.warn(
+      '[AegisVeto L2 Intent] Provider call failed, using deterministic heuristic fallback:',
+      err instanceof Error ? err.message : err
+    );
   }
 
   // Deterministic heuristic fallback

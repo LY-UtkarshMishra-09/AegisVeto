@@ -1,10 +1,8 @@
-import OpenAI from 'openai';
 import path from 'node:path';
 import fs from 'node:fs';
-import dotenv from 'dotenv';
 import yaml from 'js-yaml';
 import { z } from 'zod';
-import { LLMProvider } from './intent.js';
+import { getLayer2Client, LLMProvider } from './client.js';
 
 function findRepoRoot(): string {
   let curr = process.cwd();
@@ -15,12 +13,9 @@ function findRepoRoot(): string {
   return process.cwd();
 }
 
-dotenv.config({ path: path.join(findRepoRoot(), '.env') });
-dotenv.config();
-
 export interface PolicyPatchParams {
   toolName: string;
-  args: Record<string, unknown>;
+  args?: Record<string, unknown>;
   reason?: string;
   currentPolicyYaml?: string;
   provider?: LLMProvider;
@@ -31,34 +26,14 @@ export interface PolicyPatchSuggestion {
   explanation: string;
 }
 
-function getAiClient(provider: LLMProvider): { client: OpenAI; model: string } {
-  if (provider === 'groq') {
-    return {
-      client: new OpenAI({
-        baseURL: 'https://api.groq.com/openai/v1',
-        apiKey: process.env.GROQ_API_KEY || 'dummy_groq_key',
-      }),
-      model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
-    };
-  }
-
-  return {
-    client: new OpenAI({
-      baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
-      apiKey: 'ollama',
-    }),
-    model: process.env.OLLAMA_MODEL || 'qwen3:8b',
-  };
-}
-
 export async function suggestPolicyRule(params: PolicyPatchParams): Promise<PolicyPatchSuggestion> {
-  const provider = params.provider || ((process.env.LLM_PROVIDER as LLMProvider) || 'groq');
-  const { client, model } = getAiClient(provider);
+  const { client, model } = getLayer2Client();
+  const args = params.args || {};
 
   const prompt = `You are AegisVeto's Layer 2 Policy Auto-Patcher ("Learn Once, Enforce Forever").
 An operator intercepted an unsafe or malicious tool invocation:
 Tool Name: ${params.toolName}
-Arguments: ${JSON.stringify(params.args)}
+Arguments: ${JSON.stringify(args)}
 Reason: ${params.reason || 'Flagged by operator as hazardous'}
 
 Generate a minimal, valid policy rule snippet in YAML for AegisVeto's policy.yaml that will deterministically block or restrict this pattern in Layer 1.
@@ -96,54 +71,40 @@ Respond with ONLY valid JSON with this exact shape:
       }
     }
   } catch (err) {
-    console.warn('[AegisVeto L2 Patcher] Provider call failed, using deterministic fallback:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[AegisVeto L2 Patcher] Provider call failed, using deterministic fallback:',
+      err instanceof Error ? err.message : err
+    );
   }
 
   // Deterministic fallback generator
-  const argsStr = JSON.stringify(params.args);
+  const argsStr = JSON.stringify(args);
   if (params.toolName === 'send_external_email' || /email/i.test(params.toolName)) {
-    const to = typeof params.args.to === 'string' ? params.args.to : 'attacker@evil.com';
+    const to = typeof args.to === 'string' ? args.to : 'attacker@evil.com';
     const domain = to.includes('@') ? to.split('@')[1] : 'evil.com';
     return {
-      suggestedYaml: `tools:
-  send_external_email:
-    action: deny
-    class: egress
-    blocked_domains:
-      - "${domain}"`,
+      suggestedYaml: `tools:\n  send_external_email:\n    action: deny\n    class: egress\n    blocked_domains:\n      - "${domain}"`,
       explanation: `Permanently blocks outbound email dispatch to ${domain} and marks ${params.toolName} as a hard-deny egress sink.`,
     };
   }
 
   if (params.toolName === 'bash_exec' || /rm\s+-rf/i.test(argsStr)) {
     return {
-      suggestedYaml: `tools:
-  bash_exec:
-    action: quarantine
-    quarantine_patterns:
-      - "rm\\\\s+-rf"
-      - "tar\\\\s+-[a-z]*z"
-      - "sudo"`,
+      suggestedYaml: `tools:\n  bash_exec:\n    action: quarantine\n    quarantine_patterns:\n      - "rm\\\\s+-rf"\n      - "tar\\\\s+-[a-z]*z"\n      - "sudo"`,
       explanation: `Adds destructive shell execution patterns to Layer 1 quarantine traps to mandate human approval.`,
     };
   }
 
   if (params.toolName === 'read_file') {
-    const p = typeof params.args.path === 'string' ? params.args.path : '*.secret';
+    const p = typeof args.path === 'string' ? args.path : '*.secret';
     return {
-      suggestedYaml: `tools:
-  read_file:
-    deny_paths:
-      - "**/${p}*"`,
+      suggestedYaml: `tools:\n  read_file:\n    deny_paths:\n      - "**/${p}*"`,
       explanation: `Adds '${p}' to deterministic path protection blacklist, preventing all future read attempts.`,
     };
   }
 
   return {
-    suggestedYaml: `tools:
-  ${params.toolName}:
-    action: require_approval
-    class: egress`,
+    suggestedYaml: `tools:\n  ${params.toolName}:\n    action: require_approval\n    class: egress`,
     explanation: `Restricts '${params.toolName}' to require human operator approval for all subsequent invocations.`,
   };
 }
